@@ -12,7 +12,7 @@ func createConsulKVRecord() {
 	putBody, _ := json.Marshal("isuru")
 	responseBody := bytes.NewBuffer(putBody)
 
-	req, err := http.NewRequest(http.MethodPut, "http://consul.service.galactica.consul:8500/v1/kv/meta-sync", responseBody)
+	req, err := http.NewRequest(http.MethodPut, "http://localhost:8500/v1/kv/meta-sync", responseBody)
 	if err != nil {
 		panic(err)
 	}
