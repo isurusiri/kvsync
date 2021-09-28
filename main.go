@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -77,6 +78,25 @@ func receiveEvents() {
 	fmt.Printf(string(body))
 }
 
+func receiveStreamedEvents() {
+	resp, err := http.Get("http://localhost:4646/v1/event/stream?topic=Evaluation")
+	if err != nil {
+		panic(err)
+	}
+
+	reader := bufio.NewReader(resp.Body)
+
+	for {
+		line, err := reader.ReadString('\n')
+		if err != nil {
+			panic(err)
+		}
+		
+		fmt.Println(line)
+		fmt.Println("---")
+	}
+}
+
 func main() {
 	fmt.Println("Meta sync")
 	// createConsulKVRecord()
@@ -84,5 +104,10 @@ func main() {
 	listNomadServers()
 	fmt.Println("")
 	// listNomadEvaluations()
-	receiveEvents()
+	// receiveEvents()
+
+	fmt.Println("")
+	fmt.Println("**** Stream ****")
+	fmt.Println("")
+	receiveStreamedEvents()
 }
