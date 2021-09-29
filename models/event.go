@@ -12,5 +12,5 @@ type Event struct {
 	Namespace  string
 	FilterKeys []string
 	Index      uint64
-	Payload    map[string]interface{}
+	Payload    map[string]Evaluation
 }

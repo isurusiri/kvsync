@@ -5,8 +5,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
+
+	"github.com/isurusiri/funnel/models"
 )
 
 func createConsulKVRecord() {
@@ -86,15 +90,47 @@ func receiveStreamedEvents() {
 
 	reader := bufio.NewReader(resp.Body)
 
+	var events models.EventStream
+
 	for {
-		line, err := reader.ReadString('\n')
-		if err != nil {
-			panic(err)
+		events = printEvents(reader)
+		if len(events.Events) > 0 {
+			queryJobByJobID(events.Events[0].Payload["Evaluation"].JobID)
+			fmt.Println("")
 		}
+		// line, err := reader.ReadString('\n')
+		// if err != nil {
+		// 	panic(err)
+		// }
 		
-		fmt.Println(line)
-		fmt.Println("---")
+		// fmt.Println(line)
+		// fmt.Println("---")
 	}
+}
+
+func queryJobByJobID(jobID string) {
+	resp, err := http.Get(fmt.Sprintf("http://localhost:4646/v1/job/%s", jobID))
+	if err != nil {
+		panic(err)
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Printf(string(body))
+}
+
+func printEvents(body io.Reader) models.EventStream{
+	var events models.EventStream
+
+	err := json.NewDecoder(body).Decode(&events)
+	if err != nil {
+        log.Fatal(err)
+    }
+
+	return events
 }
 
 func main() {
