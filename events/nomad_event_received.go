@@ -9,7 +9,7 @@ import (
 var NomadEventReceived nomadEventReceived
 
 // NomadEventReceivedPayload is the data passed when
-// a nomad event is received event is triggered.
+// a nomad event received event is triggered.
 type NomadEventReceivedPayload struct {
 	Event models.EventStream
 }

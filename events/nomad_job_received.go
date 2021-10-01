@@ -4,8 +4,9 @@ import (
 	"github.com/isurusiri/funnel/models"
 )
 
-// NomadJobReceivedPayload is the event that is
+// NomadJobReceived is the event that is
 // going to trigger when jobs are received.
+var NomadJobReceived nomadJobReceived
 
 // NomadJobReceivedPayload is the data passed when
 // job received event is triggered.
