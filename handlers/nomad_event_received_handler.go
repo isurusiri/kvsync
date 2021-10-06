@@ -6,11 +6,11 @@ func init() {
 
 }
 
-type nomadJobReceivedHandler struct {
+type nomadEventReceivedHandler struct {
 	eventID string
 	jobID   string
 }
 
-func (n nomadJobReceivedHandler) Handle(payload events.NomadEventReceivedPayload) {
+func (n nomadEventReceivedHandler) Handle(payload events.NomadEventReceivedPayload) {
 
 }
