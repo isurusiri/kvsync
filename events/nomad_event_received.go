@@ -1,7 +1,7 @@
 package events
 
 import (
-	"github.com/isurusiri/funnel/models"
+	"io"
 )
 
 // NomadEventReceived is the event that is going to
@@ -11,7 +11,7 @@ var NomadEventReceived nomadEventReceived
 // NomadEventReceivedPayload is the data passed when
 // a nomad event received event is triggered.
 type NomadEventReceivedPayload struct {
-	Event models.EventStream
+	EventBody io.Reader
 }
 
 type nomadEventReceived struct {

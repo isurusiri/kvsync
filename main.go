@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -10,6 +9,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/isurusiri/funnel/events"
 	"github.com/isurusiri/funnel/models"
 )
 
@@ -88,16 +88,19 @@ func receiveStreamedEvents() {
 		panic(err)
 	}
 
-	reader := bufio.NewReader(resp.Body)
+	// reader := bufio.NewReader(resp.Body)
 
-	var events models.EventStream
+	// var events models.EventStream
 
 	for {
-		events = printEvents(reader)
-		if len(events.Events) > 0 {
-			queryJobByJobID(events.Events[0].Payload["Evaluation"].JobID)
-			fmt.Println("")
-		}
+		events.NomadEventReceived.Trigger(events.NomadEventReceivedPayload{
+			EventBody: resp.Body,
+		})
+		// events = printEvents(reader)
+		// if len(events.Events) > 0 {
+		// 	queryJobByJobID(events.Events[0].Payload["Evaluation"].JobID)
+		// 	fmt.Println("")
+		// }
 		// line, err := reader.ReadString('\n')
 		// if err != nil {
 		// 	panic(err)
@@ -137,7 +140,7 @@ func main() {
 	fmt.Println("Meta sync")
 	// createConsulKVRecord()
 
-	listNomadServers()
+	// listNomadServers()
 	fmt.Println("")
 	// listNomadEvaluations()
 	// receiveEvents()
