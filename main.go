@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"time"
@@ -30,7 +31,7 @@ func main() {
 	events := client.EventStream()
 	q := &api.QueryOptions{}
 	topics := map[api.Topic][]string{
-		api.TopicNode: {"*"},
+		api.TopicJob: {"*"},
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -45,21 +46,50 @@ func main() {
 		}
 		for _, e := range event.Events {
 			// verify that we get a node
-			n, err := e.Node()
-			if err != nil {
-				fmt.Printf(err.Error())
-			}
+			// n, err := e.Node()
+			// if err != nil {
+			// 	fmt.Printf(err.Error())
+			// }
 			
+			if e.Type == "EvaluationUpdated" {
+				eval, err := e.Evaluation()
+				if err != nil {
+					fmt.Printf(err.Error())
+				}
+
+				fmt.Printf(eval.ID + "\n")
+				fmt.Printf(eval.Type + "\n")
+			}
 			// eval, err := e.Evaluation()
 			// if err != nil {
 			// 	fmt.Printf(err.Error())
 			// }
 
-			fmt.Printf(n.Name)
+			if e.Type == "JobRegistered" || e.Type == "JobDeregistered" {
+				job, err := e.Job()
+				if err != nil {
+					fmt.Printf(err.Error())
+				}
+
+				fmt.Printf(*job.ID + "\n")
+				fmt.Printf(createKeyValuePairs(job.Meta))
+				fmt.Println()
+			}
+
+			// fmt.Printf(n.Name + "\n")
+			fmt.Printf(e.Type + "\n")
 			// fmt.Printf(eval.ID)
 		}
 	case <-time.After(5 * time.Second):
 		fmt.Printf("failed waiting for event stream event")
 	}
 
+}
+
+func createKeyValuePairs(m map[string]string) string {
+    b := new(bytes.Buffer)
+    for key, value := range m {
+        fmt.Fprintf(b, "%s=\"%s\"\n", key, value)
+    }
+    return b.String()
 }
