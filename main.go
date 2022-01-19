@@ -2,151 +2,94 @@ package main
 
 import (
 	"bytes"
-	"encoding/json"
+	"context"
 	"fmt"
-	"io"
-	"io/ioutil"
-	"log"
-	"net/http"
+	"time"
 
-	"github.com/isurusiri/funnel/events"
-	"github.com/isurusiri/funnel/models"
+	"github.com/hashicorp/nomad/api"
 )
 
-func createConsulKVRecord() {
-	putBody, _ := json.Marshal("isuru")
-	responseBody := bytes.NewBuffer(putBody)
-
-	req, err := http.NewRequest(http.MethodPut, "http://localhost:8500/v1/kv/meta-sync", responseBody)
-	if err != nil {
-		panic(err)
-	}
-
-	req.Header.Set("Content-Type", "application/json; charset=utf-8")
-
-	client := &http.Client{}
-
-	resp, err := client.Do(req)
-    if err != nil {
-        panic(err)
-    }
-
-    fmt.Println(resp.StatusCode)
-	fmt.Println(resp.Body)
-	fmt.Println("")
-
-	resp.Body.Close()
-}
-
-func listNomadServers() {
-	resp, err := http.Get("http://localhost:4646/v1/nodes")
-	if err != nil {
-		panic(err)
-	}
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Printf(string(body))
-
-}
-
-func listNomadEvaluations() {
-	resp, err := http.Get("http://localhost:4646/v1/evaluations")
-	if err != nil {
-		panic(err)
-	}
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Printf(string(body))
-}
-
-func receiveEvents() {
-	resp, err := http.Get("http://localhost:4646/v1/event/stream?topic=Evaluation")
-	if err != nil {
-		panic(err)
-	}
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		panic(err)
-	}
-
-
-	fmt.Printf(string(body))
-}
-
-func receiveStreamedEvents() {
-	resp, err := http.Get("http://localhost:4646/v1/event/stream?topic=Evaluation")
-	if err != nil {
-		panic(err)
-	}
-
-	// reader := bufio.NewReader(resp.Body)
-
-	// var events models.EventStream
-
-	for {
-		events.NomadEventReceived.Trigger(events.NomadEventReceivedPayload{
-			EventBody: resp.Body,
-		})
-		// events = printEvents(reader)
-		// if len(events.Events) > 0 {
-		// 	queryJobByJobID(events.Events[0].Payload["Evaluation"].JobID)
-		// 	fmt.Println("")
-		// }
-		// line, err := reader.ReadString('\n')
-		// if err != nil {
-		// 	panic(err)
-		// }
-		
-		// fmt.Println(line)
-		// fmt.Println("---")
-	}
-}
-
-func queryJobByJobID(jobID string) {
-	resp, err := http.Get(fmt.Sprintf("http://localhost:4646/v1/job/%s", jobID))
-	if err != nil {
-		panic(err)
-	}
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Printf(string(body))
-}
-
-func printEvents(body io.Reader) models.EventStream{
-	var events models.EventStream
-
-	err := json.NewDecoder(body).Decode(&events)
-	if err != nil {
-        log.Fatal(err)
-    }
-
-	return events
-}
-
 func main() {
-	fmt.Println("Meta sync")
-	// createConsulKVRecord()
+	cfg := api.DefaultConfig()
+	
+	cfg.Address = "http://localhost:4646"
 
-	// listNomadServers()
-	fmt.Println("")
-	// listNomadEvaluations()
-	// receiveEvents()
+	// handdle "https://" in Address if HTTPS is used
 
-	fmt.Println("")
-	fmt.Println("**** Stream ****")
-	fmt.Println("")
-	receiveStreamedEvents()
+	// timeout, err := strconv.Atoi("30")
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// cfg.HttpClient.Timeout = time.Duration(timeout) * time.Second
+
+	client, err := api.NewClient(cfg)
+	if err != nil {
+		fmt.Printf(err.Error())
+	}
+
+	// build event stream request
+	events := client.EventStream()
+	q := &api.QueryOptions{}
+	topics := map[api.Topic][]string{
+		api.TopicJob: {"*"},
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	streamCh, err := events.Stream(ctx, topics, 0, q)
+
+	select {
+	case event := <-streamCh:
+		if event.Err != nil {
+			fmt.Printf(event.Err.Error())
+		}
+		for _, e := range event.Events {
+			// verify that we get a node
+			// n, err := e.Node()
+			// if err != nil {
+			// 	fmt.Printf(err.Error())
+			// }
+			
+			if e.Type == "EvaluationUpdated" {
+				eval, err := e.Evaluation()
+				if err != nil {
+					fmt.Printf(err.Error())
+				}
+
+				fmt.Printf(eval.ID + "\n")
+				fmt.Printf(eval.Type + "\n")
+			}
+			// eval, err := e.Evaluation()
+			// if err != nil {
+			// 	fmt.Printf(err.Error())
+			// }
+
+			if e.Type == "JobRegistered" || e.Type == "JobDeregistered" {
+				job, err := e.Job()
+				if err != nil {
+					fmt.Printf(err.Error())
+				}
+
+				fmt.Printf(*job.ID + "\n")
+				fmt.Printf(createKeyValuePairs(job.Meta))
+				fmt.Println()
+			}
+
+			// fmt.Printf(n.Name + "\n")
+			fmt.Printf(e.Type + "\n")
+			// fmt.Printf(eval.ID)
+		}
+	case <-time.After(5 * time.Second):
+		fmt.Printf("failed waiting for event stream event")
+	}
+
+}
+
+func createKeyValuePairs(m map[string]string) string {
+    b := new(bytes.Buffer)
+    for key, value := range m {
+        fmt.Fprintf(b, "%s=\"%s\"\n", key, value)
+    }
+    return b.String()
 }
