@@ -14,14 +14,6 @@ func main() {
 	
 	cfg.Address = "http://localhost:4646"
 
-	// handdle "https://" in Address if HTTPS is used
-
-	// timeout, err := strconv.Atoi("30")
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// cfg.HttpClient.Timeout = time.Duration(timeout) * time.Second
-
 	client, err := api.NewClient(cfg)
 	if err != nil {
 		fmt.Printf(err.Error())
@@ -39,49 +31,30 @@ func main() {
 
 	streamCh, err := events.Stream(ctx, topics, 0, q)
 
-	select {
-	case event := <-streamCh:
-		if event.Err != nil {
-			fmt.Printf(event.Err.Error())
-		}
-		for _, e := range event.Events {
-			// verify that we get a node
-			// n, err := e.Node()
-			// if err != nil {
-			// 	fmt.Printf(err.Error())
-			// }
-			
-			if e.Type == "EvaluationUpdated" {
-				eval, err := e.Evaluation()
-				if err != nil {
-					fmt.Printf(err.Error())
-				}
-
-				fmt.Printf(eval.ID + "\n")
-				fmt.Printf(eval.Type + "\n")
+	for {
+		select {
+		case event := <-streamCh:
+			if event.Err != nil {
+				fmt.Printf(event.Err.Error())
 			}
-			// eval, err := e.Evaluation()
-			// if err != nil {
-			// 	fmt.Printf(err.Error())
-			// }
+			for _, e := range event.Events {
 
-			if e.Type == "JobRegistered" || e.Type == "JobDeregistered" {
-				job, err := e.Job()
-				if err != nil {
-					fmt.Printf(err.Error())
+				if e.Type == "JobRegistered" || e.Type == "JobDeregistered" {
+					job, err := e.Job()
+					if err != nil {
+						fmt.Printf(err.Error())
+					}
+	
+					fmt.Printf(*job.ID + "\n")
+					fmt.Printf(createKeyValuePairs(job.Meta))
+					fmt.Println()
 				}
-
-				fmt.Printf(*job.ID + "\n")
-				fmt.Printf(createKeyValuePairs(job.Meta))
-				fmt.Println()
+	
+				fmt.Printf(e.Type + "\n")
 			}
-
-			// fmt.Printf(n.Name + "\n")
-			fmt.Printf(e.Type + "\n")
-			// fmt.Printf(eval.ID)
+		case <-time.After(120 * time.Second):
+			fmt.Printf("... ")
 		}
-	case <-time.After(5 * time.Second):
-		fmt.Printf("failed waiting for event stream event")
 	}
 
 }
