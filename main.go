@@ -63,7 +63,7 @@ func main() {
 							writeToKV(kv, key, value)
 						}
 					} else if e.Type == "JobDeregistered" {
-						for key, _ := range job.Meta {
+						for key := range job.Meta {
 							removeFromKV(kv, key)	
 						}
 					}
