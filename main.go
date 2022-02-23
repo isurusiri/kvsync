@@ -11,9 +11,9 @@ import (
 )
 
 func main() {
-	cfg         := api.DefaultConfig()
-	cfg.Address = "http://localhost:4646"
-	client, err := api.NewClient(cfg)
+	nomadCfg         := api.DefaultConfig()
+	nomadCfg.Address = "http://localhost:4646"
+	client, err := api.NewClient(nomadCfg)
 	if err != nil {
 		fmt.Printf(err.Error())
 	}
