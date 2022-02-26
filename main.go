@@ -3,26 +3,43 @@ package main
 import (
 	"bytes"
 	"context"
+	"flag"
 	"fmt"
 	"time"
 
-	consule_api "github.com/hashicorp/consul/api"
+	consul_api "github.com/hashicorp/consul/api"
 	"github.com/hashicorp/nomad/api"
 )
 
 func main() {
+
+	nomadHostPtr  := flag.String("n", "http://localhost:4646", "Nomad host url")
+	consulHostPtr := flag.String("c", "http://localhost:8500", "Consul host url")
+
+	flag.Parse()
+
+
+	fmt.Println("Starting funnel...")
+	fmt.Println("Connecting to Nomad host...")
+
 	nomadCfg         := api.DefaultConfig()
-	nomadCfg.Address = "http://localhost:4646"
+	nomadCfg.Address = *nomadHostPtr
 	client, err := api.NewClient(nomadCfg)
 	if err != nil {
 		fmt.Printf(err.Error())
+	} else {
+		fmt.Printf("Connected to Nomad host via %s ...\n", *nomadHostPtr)
 	}
 
-	consulCfg         := consule_api.DefaultNonPooledConfig()
-	consulCfg.Address = "http://localhost:8500"
-	consulClient, err := consule_api.NewClient(consulCfg)
+	fmt.Println("Connecting to Consul host...")
+
+	consulCfg         := consul_api.DefaultNonPooledConfig()
+	consulCfg.Address = *consulHostPtr
+	consulClient, err := consul_api.NewClient(consulCfg)
 	if err != nil {
 		fmt.Printf(err.Error())
+	} else {
+		fmt.Printf("Connected to Consul host via %s ...\n", *consulHostPtr)
 	}
 
 	// Get a handle to the KV
@@ -54,22 +71,20 @@ func main() {
 						fmt.Printf(err.Error())
 					}
 	
-					fmt.Printf(*job.ID + "\n")
-					fmt.Printf(createKeyValuePairs(job.Meta))
-					fmt.Println()
+					fmt.Printf(*job.ID + " " + e.Type + "\n")
+					// fmt.Printf(createKeyValuePairs(job.Meta))
+					// fmt.Println()
 
 					if e.Type == "JobRegistered" {
 						for key, value := range job.Meta {
-							writeToKV(kv, key, value)
+							writeToKV(kv, createKeyWithJobID(*job.ID, key), value)
 						}
 					} else if e.Type == "JobDeregistered" {
 						for key := range job.Meta {
-							removeFromKV(kv, key)	
+							removeFromKV(kv, createKeyWithJobID(*job.ID, key))	
 						}
 					}
 				}
-
-				fmt.Printf(e.Type + "\n")
 			}
 		case <-time.After(120 * time.Second):
 			fmt.Printf("... ")
@@ -86,17 +101,21 @@ func createKeyValuePairs(m map[string]string) string {
     return b.String()
 }
 
-func writeToKV(kv *consule_api.KV, key, value string) {
-	p := &consule_api.KVPair{Key: key, Value: []byte(value)}
+func writeToKV(kv *consul_api.KV, key, value string) {
+	p := &consul_api.KVPair{Key: key, Value: []byte(value)}
 	_, err := kv.Put(p, nil)
 	if err != nil {
 		panic(err)
 	}
 }
 
-func removeFromKV(kv *consule_api.KV, key string) {
+func removeFromKV(kv *consul_api.KV, key string) {
 	_, err := kv.Delete(key, nil)
 	if err != nil {
 		panic(err)
 	}
+}
+
+func createKeyWithJobID(jobID string, key string) string {
+	return fmt.Sprintf("%s-%s", jobID, key)
 }
