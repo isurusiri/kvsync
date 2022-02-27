@@ -20,7 +20,7 @@ RUN go mod download
 COPY *.go ./
 
 # Compile source code
-RUN go build -o /funnel
+RUN go build -o /kvsync
 
 # Execute built artifact
-CMD [ "/funnel" ]
+CMD [ "/kvsync" ]

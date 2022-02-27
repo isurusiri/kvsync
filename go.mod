@@ -1,4 +1,4 @@
-module github.com/isurusiri/funnel
+module github.com/isurusiri/kvsync
 
 go 1.16
 
