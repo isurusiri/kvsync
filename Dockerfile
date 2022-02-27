@@ -23,4 +23,4 @@ COPY *.go ./
 RUN go build -o /kvsync
 
 # Execute built artifact
-CMD [ "/kvsync" ]
+ENTRYPOINT [ "/kvsync" ]
