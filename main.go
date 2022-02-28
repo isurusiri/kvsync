@@ -19,7 +19,7 @@ func main() {
 	flag.Parse()
 
 
-	fmt.Println("Starting funnel...")
+	fmt.Println("Starting kvsync...")
 	fmt.Println("Connecting to Nomad host...")
 
 	nomadCfg         := api.DefaultConfig()
