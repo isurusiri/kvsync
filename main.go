@@ -21,26 +21,10 @@ func main() {
 
 	fmt.Println("Starting kvsync...")
 	fmt.Println("Connecting to Nomad host...")
-
-	nomadCfg         := api.DefaultConfig()
-	nomadCfg.Address = *nomadHostPtr
-	client, err := api.NewClient(nomadCfg)
-	if err != nil {
-		fmt.Printf(err.Error())
-	} else {
-		fmt.Printf("Connected to Nomad host via %s ...\n", *nomadHostPtr)
-	}
+	client := createNomadClient(nomadHostPtr)
 
 	fmt.Println("Connecting to Consul host...")
-
-	consulCfg         := consul_api.DefaultNonPooledConfig()
-	consulCfg.Address = *consulHostPtr
-	consulClient, err := consul_api.NewClient(consulCfg)
-	if err != nil {
-		fmt.Printf(err.Error())
-	} else {
-		fmt.Printf("Connected to Consul host via %s ...\n", *consulHostPtr)
-	}
+	consulClient := createConsulClient(consulHostPtr)
 
 	// Get a handle to the KV
 	kv := consulClient.KV()
@@ -56,6 +40,9 @@ func main() {
 	defer cancel()
 
 	streamCh, err := events.Stream(ctx, topics, 0, q)
+	if err != nil {
+		fmt.Printf("Error while listening to Nomad event stream")
+	}
 
 	for {
 		select {
@@ -91,6 +78,32 @@ func main() {
 		}
 	}
 
+}
+
+func createNomadClient(nomadHost *string) *api.Client {
+	nomadCfg         := api.DefaultConfig()
+	nomadCfg.Address = *nomadHost
+	client, err := api.NewClient(nomadCfg)
+	if err != nil {
+		fmt.Printf(err.Error())
+	} else {
+		fmt.Printf("Connected to Nomad host via %s ...\n", *nomadHost)
+	}
+
+	return client
+}
+
+func createConsulClient(consulHost *string) *consul_api.Client {
+	consulCfg         := consul_api.DefaultNonPooledConfig()
+	consulCfg.Address = *consulHost
+	consulClient, err := consul_api.NewClient(consulCfg)
+	if err != nil {
+		fmt.Printf(err.Error())
+	} else {
+		fmt.Printf("Connected to Consul host via %s ...\n", *consulHost)
+	}
+
+	return consulClient
 }
 
 func createKeyValuePairs(m map[string]string) string {
