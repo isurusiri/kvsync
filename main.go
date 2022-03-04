@@ -79,7 +79,7 @@ func main() {
 	}
 
 }
-
+ // Creates a client to connect with Nomad api identified by nomadHost
 func createNomadClient(nomadHost *string) *api.Client {
 	nomadCfg         := api.DefaultConfig()
 	nomadCfg.Address = *nomadHost
@@ -93,6 +93,7 @@ func createNomadClient(nomadHost *string) *api.Client {
 	return client
 }
 
+// Creates a client to connect with Consul api identified by consulHost
 func createConsulClient(consulHost *string) *consul_api.Client {
 	consulCfg         := consul_api.DefaultNonPooledConfig()
 	consulCfg.Address = *consulHost
@@ -106,6 +107,7 @@ func createConsulClient(consulHost *string) *consul_api.Client {
 	return consulClient
 }
 
+// Creates a string containing key and value in the key=value format
 func createKeyValuePairs(m map[string]string) string {
     b := new(bytes.Buffer)
     for key, value := range m {
@@ -114,6 +116,7 @@ func createKeyValuePairs(m map[string]string) string {
     return b.String()
 }
 
+// Writes a key value pair to Consul KV store
 func writeToKV(kv *consul_api.KV, key, value string) {
 	p := &consul_api.KVPair{Key: key, Value: []byte(value)}
 	_, err := kv.Put(p, nil)
@@ -122,6 +125,7 @@ func writeToKV(kv *consul_api.KV, key, value string) {
 	}
 }
 
+// Removes a key value pair identified by the key from Consul KV store
 func removeFromKV(kv *consul_api.KV, key string) {
 	_, err := kv.Delete(key, nil)
 	if err != nil {
@@ -129,6 +133,8 @@ func removeFromKV(kv *consul_api.KV, key string) {
 	}
 }
 
+// Prepend the nomad job id to the key and return it as a single string
+// in the job-id-key format
 func createKeyWithJobID(jobID string, key string) string {
 	return fmt.Sprintf("%s-%s", jobID, key)
 }
